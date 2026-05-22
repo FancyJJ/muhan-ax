@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation - 농업용 지하수 예측 활용 AI 솔루션</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles/variables.css">
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+
+<body>
+  <!--
+    ═══════════════════════════════════════════════════════════════════════════
+    REACT 마이그레이션 가이드 (페이지 루트)
+    ───────────────────────────────────────────────────────────────────────────
+    권장 페이지 컴포넌트: SimulationPage (또는 App)
+      ├─ SiteHeader .................. 글로벌 GNB (로고·네비·실시간·로그인)
+      ├─ SimulationSummaryBar ........ 시뮬레이션 전용 상단 요약 바
+      │    ├─ SimulationPageTitle ..... 아이콘 + "시뮬레이션" 제목
+      │    ├─ AnalysisSummaryCards .... 영향/유동/포획 카드 3개 (data-summary-panel c|d|e)
+      │    └─ MapToolbar .............. 이동·측정·삭제·레이어 등 도구 버튼 행
+      ├─ SimulationMain .............. 본문 3컬럼 래퍼 (.main-area)
+      │    └─ MapStage ............... 지도 스테이지 + 모든 맵 오버레이 패널
+      │         └─ MapView ........... .map-background (햄버거·포인트·슬라이드 패널들)
+      └─ SummaryPanelLayer ......... 플레이스홀더 슬라이드(스크림 + C/D/E 다이얼로그)
+    레이아웃 루트 클래스: .page-root (구 .container — 패널 내부 .container 와 구분)
+    주요 id (상태/이벤트 연결 시): mapHamburgerBtn, mapOverlayPanel, mapPointTrigger,
+      mapPointPanel, impactPanel, flowPanel, capturePanel, summaryPanelLayer, …
+    ═══════════════════════════════════════════════════════════════════════════
+  -->
+  <div class="page-root">
+    <!--
+      ─────────────────────────────────────────────────────────────────────────
+      REACT 경계: SiteHeader — components/layout/SiteHeader.tsx 권장
+      역할: 대시보드·시뮬레이션 등 공통 상단 네비게이션 (이 페이지 전용 아님)
+      ─────────────────────────────────────────────────────────────────────────
+    -->
+    <!-- ---------- 상단 사이트 헤더: 시작 ---------- -->
+    <header>
+      <a href="dashboard.html" class="logo-section">
+        <span class="logo-icon" aria-hidden="true">
+          <svg width="38" height="28" viewBox="0 0 38 28" fill="none" aria-hidden="true">
+            <text x="2" y="20" font-family="Pretendard,sans-serif" font-size="14" font-weight="800" fill="rgba(255,255,255,0.85)" letter-spacing="-0.5">kr</text>
+            <path d="M26 8 L34 14 L26 20" stroke="#E8563A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </span>
+        <div class="logo-text"><h1>농업용 지하수 예측 활용 AI 솔루션</h1></div>
+      </a>
+      <nav class="header-nav" aria-label="주요 페이지">
+        <a href="dashboard.html" class="ui-btn nav-btn">대시보드</a>
+        <a href="detail.html" class="ui-btn nav-btn">상세 정보</a>
+        <a href="index.html" class="ui-btn nav-btn simulation active">시뮬레이션</a>
+        <a href="planning.html" class="ui-btn nav-btn">용수공급 계획</a>
+        <a href="report.html" class="ui-btn nav-btn">리포트</a>
+        <a href="openapi.html" class="ui-btn nav-btn">Open API</a>
+        <a href="guide.html" class="ui-btn nav-btn">지하수 용어</a>
+        <a href="#" class="ui-btn nav-btn nav-bot">시스템 안내봇</a>
+      </nav>
+      <div class="header-right" role="group" aria-label="페이지 상태 및 계정">
+        <p class="live-badge" role="status"><span class="live-dot" aria-hidden="true"></span><span>실시간</span></p>
+        <time class="timestamp" datetime="2025-01-22T14:32">2025.01.22 14:32 기준</time>
+        <nav class="header-actions" aria-label="로그인·관리">
+          <a href="#" class="ui-btn login-btn">로그인</a>
+          <a href="#" class="ui-btn admin-btn">관리자</a>
+        </nav>
+      </div>
+    </header>
+    <!-- ---------- 상단 사이트 헤더: 끝 ---------- -->
+
+    <!--
+      ─────────────────────────────────────────────────────────────────────────
+      REACT 경계: SimulationSummaryBar — components/simulation/SimulationSummaryBar.tsx 권장
+      하위 3블록을 각각 컴포넌트로 쪼개면 props/레이아웃 테스트가 쉬움.
+      ─────────────────────────────────────────────────────────────────────────
+    -->
+    <!-- ---------- 페이지 요약 바 (summary-bar): 시작 ---------- -->
+    <section class="summary-bar" aria-labelledby="simulation-page-heading">
+
+      <!--
+        REACT 경계: SimulationPageTitle — 제목 + 아이콘만 (summary-info)
+      -->
+      <!-- ··· 페이지 제목 (summary-info): 시작 ··· -->
+      <header class="summary-info">
+          <div class="page-title">
+              <div class="page-icon" aria-hidden="true">
+                  <svg class="simulation-icon" width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <g clip-path="url(#clip0_9_4084)">
+                          <path d="M11.2227 20.4277C8.63211 20.4277 6.60254 15.9419 6.60254 10.2139C6.60254 4.4858 8.63211 0 11.2227 0C11.5126 0 11.746 0.233365 11.746 0.523304C11.746 0.813243 11.5126 1.04661 11.2227 1.04661C9.53257 1.04661 7.6515 4.8111 7.6515 10.2115C7.6515 15.6119 9.53493 19.3764 11.2227 19.3764C11.5126 19.3764 11.746 19.6098 11.746 19.8997C11.746 20.1896 11.5126 20.423 11.2227 20.423V20.4277Z" fill="var(--color-grey-98, #f8fafc)" />
+                          <path d="M5.83649 14.3272C5.79878 14.3272 5.76106 14.3225 5.72335 14.3154C2.14036 13.5187 0 11.9959 0 10.2398C0 7.60677 4.7286 5.61963 11.0012 5.61963C17.2738 5.61963 22.0024 7.60441 22.0024 10.2398C22.0024 10.5297 21.769 10.7631 21.4791 10.7631C21.1891 10.7631 20.9557 10.5297 20.9557 10.2398C20.9557 8.54966 16.8683 6.6686 11.0035 6.6686C5.13875 6.6686 1.04661 8.54966 1.04661 10.2398C1.04661 11.4326 2.97011 12.6324 5.94728 13.2924C6.23015 13.356 6.40694 13.6342 6.34565 13.9171C6.29144 14.1622 6.07457 14.3272 5.83414 14.3272H5.83649Z" fill="white" />
+                          <path d="M11.0012 14.8576C10.3411 14.8576 9.68348 14.834 9.03995 14.7869C8.75237 14.7657 8.53551 14.5158 8.55436 14.2259C8.57558 13.9383 8.83016 13.7191 9.11538 13.7403C9.72591 13.7851 10.3553 13.8063 11.0012 13.8063C11.2911 13.8063 11.5245 14.0396 11.5245 14.3296C11.5245 14.6195 11.2911 14.8529 11.0012 14.8529V14.8576Z" fill="white" />
+                          <path d="M11.4066 16.8377C11.284 16.8377 11.1591 16.7952 11.0601 16.708L8.73115 14.6596C8.618 14.5606 8.552 14.4168 8.552 14.2659C8.552 14.1151 8.618 13.9713 8.73115 13.8723L11.0601 11.8238C11.277 11.6329 11.607 11.6541 11.8003 11.871C11.9912 12.0879 11.97 12.4179 11.7531 12.6112L9.87205 14.2659L11.7531 15.9207C11.97 16.1116 11.9912 16.444 11.8003 16.6609C11.6965 16.7787 11.5528 16.84 11.4066 16.84V16.8377Z" fill="white" />
+                          <path d="M15.2583 12.3872C15.2466 12.3872 15.2324 12.3872 15.2206 12.3872C14.933 12.366 14.7162 12.1161 14.735 11.8262C14.7728 11.3028 14.794 10.763 14.794 10.2138C14.794 4.81341 12.9105 1.04891 11.2228 1.04891C10.9328 1.04891 10.6995 0.815547 10.6995 0.525608C10.6995 0.23567 10.9328 0.00230408 11.2228 0.00230408C13.8134 0.00230408 15.8429 4.48811 15.8429 10.2162C15.8429 10.7913 15.8217 11.3571 15.7816 11.9039C15.7628 12.1797 15.5318 12.3895 15.2607 12.3895L15.2583 12.3872Z" fill="white" />
+                          <path d="M11.2228 20.4277C10.9328 20.4277 10.6995 20.1944 10.6995 19.9044C10.6995 19.6145 10.9328 19.3811 11.2228 19.3811C12.2929 19.3811 13.382 17.9479 14.0703 15.6449C14.1528 15.3691 14.4427 15.2112 14.7209 15.2913C14.999 15.3738 15.157 15.6661 15.0745 15.9419C14.2259 18.7942 12.821 20.4277 11.2228 20.4277Z" fill="white" />
+                          <path d="M11.0012 14.8576C10.7113 14.8576 10.4779 14.6242 10.4779 14.3343C10.4779 14.0444 10.7113 13.811 11.0012 13.811C16.866 13.811 20.9534 11.9299 20.9534 10.2398C20.9534 9.94986 21.1868 9.71649 21.4767 9.71649C21.7667 9.71649 22 9.94986 22 10.2398C22 12.8728 17.2714 14.8576 10.9989 14.8576H11.0012Z" fill="white" />
+                          <path d="M15.3173 12.8257C15.1664 12.8257 15.0226 12.7597 14.9236 12.6465L12.8752 10.3176C12.6842 10.1007 12.7055 9.77071 12.9223 9.57742C13.1392 9.38648 13.4692 9.4077 13.6625 9.62456L15.3173 11.5056L16.972 9.62456C17.1653 9.4077 17.4953 9.38648 17.7122 9.57742C17.9291 9.76835 17.9503 10.1007 17.7594 10.3176L15.7109 12.6465C15.6119 12.7597 15.4681 12.8257 15.3173 12.8257Z" fill="white" />
+                      </g>
+                      <defs>
+                          <clipPath id="clip0_9_4084">
+                              <rect width="22" height="20.4277" fill="white" />
+                          </clipPath>
+                      </defs>
+                  </svg>
+              </div>
+              <h2 id="simulation-page-heading" class="simulation-text">시뮬레이션</h2>
+          </div>
+      </header>
+      <!-- ··· 페이지 제목 (summary-info): 끝 ··· -->
+
+      <!--
+        REACT 경계: summary-cards-section = AnalysisSummaryCards + MapToolbar
+        - AnalysisSummaryCards: ul.summary-cards (카드 1개 = AnalysisSummaryCard)
+        - MapToolbar: ul.additional-summary-cards
+      -->
+      <!-- ··· 분석 요약 카드 (summary-cards-section): 시작 ··· -->
+      <section class="summary-cards-section" aria-label="분석 요약">
+
+          <!-- REACT: AnalysisSummaryCard ×3 — props: panelKey 'c'|'d'|'e', title, icon variant -->
+          <!-- ···· 분석 유형 카드 행 (summary-cards): 시작 ···· -->
+          <ul class="summary-cards">
+            <li>
+              <!-- Summary card C → Figma node 47-224 -->
+              <article
+                class="ui-card ui-card--interactive summary-card"
+                data-summary-panel="c"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                aria-label="영향반경 분석 상세 패널 열기"
+              >
+                  <div class="div-sum-icon-map-01">
+                      <div class="icon" aria-hidden="true">
+                          <svg class="vector" width="19" height="5" viewBox="0 0 19 5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M14.075 0C16.6333 0.427778 18.3333 1.17778 18.3333 2.03611C18.3333 3.36667 14.2306 4.44444 9.16667 4.44444C4.10278 4.44444 0 3.36667 0 2.03611C0 1.21389 1.56944 0.486111 3.96111 0.0527774" stroke="#06B6D4" stroke-width="1.12562" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                          <svg class="group" width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M5.72791 15.2641C5.76429 15.2864 5.76149 15.278 5.72791 15.2417C5.69432 15.278 5.69153 15.2892 5.72791 15.2641Z" stroke="var(--color-cyan-43, #06b6d4)" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+                              <path d="M5.72778 0C2.56389 0 0 2.61667 0 5.84167C0 6.925 0.172222 7.51389 0.458334 8.43611C1.30833 11.1778 5.72778 15.2417 5.72778 15.2417C5.72778 15.2417 10.1444 11.1806 10.9944 8.45C11.2833 7.52222 11.4583 6.93056 11.4583 5.84167C11.4583 2.61667 8.89445 0 5.73056 0H5.72778ZM5.72778 8.40278C4.14445 8.40278 2.86389 7.11944 2.86389 5.53889C2.86389 3.95833 4.14722 2.675 5.72778 2.675C7.30833 2.675 8.59167 3.95833 8.59167 5.53889C8.59167 7.11944 7.30833 8.40278 5.72778 8.40278Z" stroke="var(--color-cyan-43, #06b6d4)" stroke-width="1.12562" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                      </div>
+                  </div>
+                  <div class="div-sum-info">
+                      <div class="div-sum-val">
+                          <h3 class="summary-card-name summary-card-name--radius"> 영향반경 분석 </h3>
+                      </div>
+                  </div>
+              </article>
+            </li>
+            <li>
+              <article
+                class="ui-card ui-card--interactive summary-card"
+                data-summary-panel="d"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                aria-label="유동방향 분석 상세 패널 열기"
+              >
+                  <div class="div-sum-icon-map-02">
+                      <div class="icon2" aria-hidden="true">
+                          <svg class="group2" width="10" height="14" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M5.00004 13.3251C5.03083 13.3447 5.02243 13.3307 5.00004 13.3056C4.97765 13.3307 4.96926 13.3447 5.00004 13.3251Z" stroke="var(--color-azure-60, #3b82f6)" stroke-width="1.12562" stroke-linecap="round" stroke-linejoin="round" />
+                              <path d="M5 0C2.23889 0 0 2.28333 0 5.1C0 6.04444 0.15 6.55833 0.4 7.36389C1.14722 9.775 4.73333 13.0028 5 13.3056C5.26389 13.0028 8.85 9.77778 9.59722 7.375C9.85 6.56667 10.0028 6.04722 10.0028 5.1C10.0028 2.28333 7.76389 0 5.00278 0H5ZM5.01944 7.12778C3.91389 7.12778 3.01944 6.23333 3.01944 5.12778C3.01944 4.02222 3.91389 3.12778 5.01944 3.12778C6.125 3.12778 7.01944 4.02222 7.01944 5.12778C7.01944 6.23333 6.125 7.12778 5.01944 7.12778Z" stroke="var(--color-azure-60, #3b82f6)" stroke-width="1.12562" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                          <svg class="vector2" width="16" height="19" viewBox="0 0 16 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M13.8028 0H11.1111C8.59167 0 6.52778 2.06111 6.52778 4.58333C6.52778 7.10556 7.97222 9.16667 10.4944 9.16667H11.35C13.8694 9.16667 15.3167 11.2306 15.3167 13.75C15.3167 16.2722 13.2528 18.3333 10.7333 18.3333H0" stroke="#3B82F6" stroke-width="1.12562" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.78 2.78" />
+                          </svg>
+                      </div>
+                  </div>
+                  <div class="div-sum-info">
+                      <div class="div-sum-val">
+                          <h3 class="summary-card-name summary-card-name--flow"> 유동방향 분석 </h3>
+                      </div>
+                  </div>
+              </article>
+            </li>
+            <li>
+              <article
+                class="ui-card ui-card--interactive summary-card"
+                data-summary-panel="e"
+                role="button"
+                tabindex="0"
+                aria-haspopup="dialog"
+                aria-label="포획구간 분석 상세 패널 열기"
+              >
+                  <div class="div-sum-icon-map-03">
+                      <div class="icon3 icon3--asset" aria-hidden="true">
+                          <img src="images/icon.svg" alt="" width="19" height="19" decoding="async" />
+                      </div>
+                  </div>
+                  <div class="div-sum-info">
+                      <div class="div-sum-val">
+                          <h3 class="summary-card-name summary-card-name--capture"> 포획구간 분석 </h3>
+                      </div>
+                  </div>
+              </article>
+            </li>
+          </ul>
+          <!-- ···· 분석 유형 카드 행 (summary-cards): 끝 ···· -->
+
+          <!-- REACT: MapToolbar — 도구 버튼만 모음; #summaryToolOpenMapPanel 은 왼쪽 맵 패널 트리거 -->
+          <!-- ···· 도구 아이콘 카드 행 (additional-summary-cards): 시작 ···· -->
+          <ul class="additional-summary-cards">
+            <li>
+              <button
+                type="button"
+                class="summary-card2 summary-tool-btn"
+                aria-label="지도 이동(이동 도구)"
+              >
+                  <div class="move-icon" aria-hidden="true">
+                      <svg class="move-icon-image" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <g clip-path="url(#clip0_32_2763)">
+                              <path d="M10.5258 17.1506V10.5258H17.1507L15.3316 12.3472L16.0753 13.0909L19.1663 10L16.0753 6.90904L15.3316 7.65277L17.1507 9.47418H10.5258V2.84936L12.3496 4.67077L13.0933 3.92705L10 0.833725L6.90906 3.92705L7.65278 4.67077L9.47419 2.84936V9.47418H2.84937L4.67078 7.65277L3.92706 6.90904L0.83374 10L3.92706 13.0909L4.67078 12.3472L2.84937 10.5258H9.47419V17.1506L7.65278 15.3292L6.90906 16.0729L10 19.1663L13.0933 16.0729L12.3496 15.3292L10.5258 17.1506Z" fill="#F59E0B" />
+                              <path d="M15.2629 0V1.05163H18.9484V4.73709H20V0H15.2629Z" fill="#F59E0B" />
+                              <path d="M1.05163 1.05163H4.73709V0H0V4.73709H1.05163V1.05163Z" fill="#F59E0B" />
+                              <path d="M1.05163 15.2629H0V20H4.73709V18.9484H1.05163V15.2629Z" fill="#F59E0B" />
+                              <path d="M18.9484 18.9484H15.2629V20H20V15.2629H18.9484V18.9484Z" fill="#F59E0B" />
+                          </g>
+                          <defs>
+                              <clipPath id="clip0_32_2763">
+                                  <rect width="20" height="20" fill="white" />
+                              </clipPath>
+                          </defs>
+                      </svg>
+                  </div>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="summary-card2 summary-tool-btn"
+                aria-label="길이 측정"
+              >
+                  <div class="length-icon" aria-hidden="true">
+                      <svg class="length-icon-image" width="25" height="20" viewBox="0 0 25 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <g clip-path="url(#clip0_9_4094)">
+                              <path d="M19.4291 1.71493L23.2569 8.23845L5.57374 18.2851L1.74592 11.7615L19.4291 1.71493ZM19.8943 0L0 11.301L5.10567 20L25 8.69897L19.8943 0Z" fill="#06B6D4" />
+                              <path d="M4.97453 8.47754L3.87036 9.10475L5.78427 12.3663L6.88844 11.7391L4.97453 8.47754Z" fill="#06B6D4" />
+                              <path d="M16.0253 2.19755L14.9211 2.82475L16.8351 6.08626L17.9392 5.45906L16.0253 2.19755Z" fill="#06B6D4" />
+                              <path d="M10.5016 5.33831L9.39746 5.96552L11.9503 10.3158L13.0545 9.68862L10.5016 5.33831Z" fill="#06B6D4" />
+                          </g>
+                          <defs>
+                              <clipPath id="clip0_9_4094">
+                                  <rect width="25" height="20" fill="white" />
+                              </clipPath>
+                          </defs>
+                      </svg>
+                  </div>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="summary-card2 summary-tool-btn"
+                aria-label="면적 측정"
+              >
+                  <div class="area-icon">
+                      <div class="area-icon-image">
+                          <svg class="group4" width="21" height="19" viewBox="0 0 21 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M11.8989 16.2347H2.97412V17.3317H11.8989V16.2347Z" fill="#10B981" />
+                              <path d="M2.03453 1.09697V2.0383H1.09494V1.09697H2.03453ZM3.13194 0H0V3.13774H3.13194V0Z" fill="#10B981" />
+                              <path d="M19.2601 1.09697V2.0383H18.3206V1.09697H19.2601ZM20.3551 0H17.2231V3.13774H20.3551V0Z" fill="#10B981" />
+                              <path d="M2.03453 16.3138V17.2551H1.09494V16.3138H2.03453ZM3.13194 15.2168H0V18.3545H3.13194V15.2168Z" fill="#10B981" />
+                              <path d="M17.381 1.02039H2.97412V2.11736H17.3786V1.02039H17.381Z" fill="#10B981" />
+                              <path d="M2.1135 15.3725V3.13774H1.01855V15.3725H2.1135Z" fill="#10B981" />
+                              <path d="M19.3366 9.88265V3.13774H18.2417V9.88265H19.3366Z" fill="#10B981" />
+                          </svg>
+                          <svg class="vector8" width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M0 0L10.3872 4.17295L6.01726 6.18159L4.05919 10.6733L0 0Z" fill="#10B981" />
+                          </svg>
+                      </div>
+                  </div>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="summary-card2 summary-tool-btn"
+                aria-label="삭제"
+              >
+                  <div class="basket-icon">
+                      <div class="basket-icon-image">
+                          <svg class="vector9" width="19" height="2" viewBox="0 0 19 2" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M18.5006 1.02206H0.499421C0.222209 1.02206 0 0.792436 0 0.511031C0 0.229626 0.224409 0 0.499421 0H18.5006C18.7778 0 19 0.229626 19 0.511031C19 0.792436 18.7756 1.02206 18.5006 1.02206Z" fill="#EF4444" />
+                          </svg>
+                          <svg class="vector10" width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M11.4999 13.3026H3.50035C1.57087 13.3026 0 11.6952 0 9.72085V0.511031C0 0.227375 0.224409 0 0.499421 0C0.774433 0 0.998842 0.229626 0.998842 0.511031V9.72085C0.998842 11.1324 2.12089 12.2783 3.49815 12.2783H11.4977C12.8771 12.2783 13.997 11.1301 13.997 9.72085V0.511031C13.997 0.227375 14.2214 0 14.4964 0C14.7714 0 14.9958 0.229626 14.9958 0.511031V9.72085C14.9958 11.6952 13.425 13.3026 11.4955 13.3026H11.4999Z" fill="#EF4444" />
+                          </svg>
+                          <svg class="group5" width="6" height="7" viewBox="0 0 6 7" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M0.499421 6.65016C0.222209 6.65016 0 6.42053 0 6.13913V0.511031C0 0.227375 0.22441 0 0.499421 0C0.774433 0 0.998842 0.229626 0.998842 0.511031V6.13913C0.998842 6.42278 0.774433 6.65016 0.499421 6.65016Z" fill="#EF4444" />
+                              <path d="M5.00089 6.65016C4.72367 6.65016 4.50146 6.42053 4.50146 6.13913V0.511031C4.50146 0.227375 4.72587 0 5.00089 0C5.2759 0 5.50031 0.229626 5.50031 0.511031V6.13913C5.50031 6.42278 5.2759 6.65016 5.00089 6.65016Z" fill="#EF4444" />
+                          </svg>
+                          <svg class="vector11" width="6" height="3" viewBox="0 0 6 3" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M5.00034 2.60468C4.80013 2.60468 4.61092 2.48086 4.53392 2.27825C4.24351 1.51733 3.54388 1.02431 2.74964 1.02431C1.95541 1.02431 1.25578 1.51733 0.965368 2.27825C0.864163 2.54165 0.573751 2.67222 0.318541 2.56866C0.0611299 2.46511 -0.0664757 2.17019 0.0347286 1.9068C0.474747 0.749662 1.54179 0 2.74964 0C3.95749 0 5.02454 0.747411 5.46456 1.9068C5.56576 2.17019 5.43816 2.46736 5.18075 2.56866C5.12134 2.59343 5.05974 2.60468 4.99814 2.60468H5.00034Z" fill="#EF4444" />
+                          </svg>
+                      </div>
+                  </div>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="summary-card2 summary-tool-btn"
+                id="summaryToolOpenMapPanel"
+                aria-label="맵 레이어 패널 열기"
+              >
+                  <div class="search-icon" aria-hidden="true">
+                      <svg class="search-icon-image" width="22" height="20" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M17.9 18.3L12.3 12.7C11.8 13.1 11.225 13.4167 10.575 13.65C9.925 13.8833 9.23333 14 8.5 14C6.68333 14 5.146 13.371 3.888 12.113C2.62933 10.8543 2 9.31667 2 7.5C2 5.68333 2.62933 4.14567 3.888 2.887C5.146 1.629 6.68333 1 8.5 1C10.3167 1 11.8543 1.629 13.113 2.887C14.371 4.14567 15 5.68333 15 7.5C15 8.23333 14.8833 8.925 14.65 9.575C14.4167 10.225 14.1 10.8 13.7 11.3L19.325 16.925C19.5083 17.1083 19.6 17.3333 19.6 17.6C19.6 17.8667 19.5 18.1 19.3 18.3C19.1167 18.4833 18.8833 18.575 18.6 18.575C18.3167 18.575 18.0833 18.4833 17.9 18.3ZM8.5 12C9.75 12 10.8127 11.5627 11.688 10.688C12.5627 9.81267 13 8.75 13 7.5C13 6.25 12.5627 5.18733 11.688 4.312C10.8127 3.43733 9.75 3 8.5 3C7.25 3 6.18733 3.43733 5.312 4.312C4.43733 5.18733 4 6.25 4 7.5C4 8.75 4.43733 9.81267 5.312 10.688C6.18733 11.5627 7.25 12 8.5 12Z" fill="#60A5FA" />
+                      </svg>
+                  </div>
+              </button>
+            </li>
+          </ul>
+          <!-- ···· 도구 아이콘 카드 행 (additional-summary-cards): 끝 ···· -->
+
+      </section>
+      <!-- ··· 분석 요약 카드 (summary-cards-section): 끝 ··· -->
+
+    </section>
+    <!-- ---------- 페이지 요약 바 (summary-bar): 끝 ---------- -->
+
+    <!--
+      ─────────────────────────────────────────────────────────────────────────
+      REACT 경계: SimulationMain — .main-area (좌·중·우 레이아웃)
+      중앙 MapStage만 시뮬레이션 전용이면 SimulationMapStage.tsx 로 분리.
+      ─────────────────────────────────────────────────────────────────────────
+    -->
+    <!-- ---------- 본문: 시뮬레이션 지도 (main): 시작 ---------- -->
+    <main class="main-area">
+      <!-- REACT: 장식용 사이드 스페이서 — 필요 시 제거 가능 -->
+      <aside class="main-side main-side-left" aria-hidden="true"></aside>
+
+      <!--
+        REACT 경계: MapStage — 지도 비율·높이·오버레이 스택의 루트
+      -->
+      <!-- ··· 지도 스테이지 (map-stage): 시작 ··· -->
+      <section class="map-stage" aria-label="지도 무대">
+
+        <!--
+          REACT 경계: MapView (.map-background)
+          자식 순서 ≈ z-index: 햄버거/포인트 → 왼쪽슬라이드패널 → 오른쪽 분석 패널들
+          각 aside 는 독립 컴포넌트로 분리 권장 (아래 주석 참고).
+        -->
+        <!-- ···· 지도 뷰·오버레이 (map-background): 시작 ···· -->
+        <section class="map-background" aria-label="지도 뷰">
+          <!-- REACT: MapMenuButton — id="mapHamburgerBtn" aria-controls="mapOverlayPanel" -->
+          <button
+            class="map-hamburger"
+            type="button"
+            id="mapHamburgerBtn"
+            aria-label="맵 메뉴 열기"
+            aria-controls="mapOverlayPanel"
+            aria-expanded="false"
+          >
+            <img class="map-hamburger-icon" src="images/Vector.svg" alt="" aria-hidden="true" />
+          </button>
+          <!-- REACT: MapPointMarker — id="mapPointTrigger" 포인트 패널 토글, 선택 시 .is-selected -->
+          <div
+            class="map-point-wrap"
+            id="mapPointTrigger"
+            role="button"
+            tabindex="0"
+            aria-pressed="false"
+            aria-label="포인트 정보 패널 열기"
+          >
+            <div class="map-point"></div>
+          </div>
+          <!--
+            REACT 경계: MapOverlayPanel — id="mapOverlayPanel"
+            하위: 헤더(닫기) | MapLeftPanelStack (탭: 레이어 / 검색 + 아코디언 + 검색결과)
+            Figma: node 296:800 leftPanel — MhAI 9:4053
+          -->
+          <aside
+            class="map-overlay-panel"
+            id="mapOverlayPanel"
+            data-figma-node="296:800"
+            aria-hidden="true"
+            aria-label="맵 왼쪽 패널"
+          >
+            <header class="map-overlay-panel__header">
+              <button
+                type="button"
+                class="map-overlay-panel__close"
+                id="overlayCloseBtn"
+                aria-label="맵 왼쪽 패널 닫기"
+              >
+                <svg class="map-overlay-panel__close-icon" width="19" height="19" viewBox="0 0 19 19" fill="none" aria-hidden="true">
+                  <path d="M4.75 4.75L14.25 14.25M14.25 4.75L4.75 14.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </header>
+            <section class="map-overlay-panel__inner" aria-label="맵 왼쪽 패널 본문">
+              <!-- REACT: MapLeftPanelStack — 탭 전환·아코디언·검색은 상태 끌어올리기 용이하게 한 덩어리로 -->
+              <section class="map-left-panel-stack" id="mapLeftPanelStack" aria-label="레이어 및 검색">
+                <section class="left-panel" aria-label="패널 컨트롤">
+                  <section class="component-7" aria-label="탭·레이어·검색">
+                    <!-- REACT: LeftPanelTabs — role="tablist" + tabpanel 연결 -->
+                    <div class="button" role="tablist" aria-label="맵 왼쪽 패널 보기 전환">
+                      <button
+                        type="button"
+                        class="button2 js-left-tab-btn is-active"
+                        id="leftViewLayerTab"
+                        data-left-view="layer"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="leftViewLayerPanel"
+                      >
+                        <div class="frame-142">
+                          <img class="component-1" src="images/layer.svg" />
+                          <div class="span">
+                            <div class="text">레이어</div>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        class="button3 js-left-tab-btn"
+                        id="leftViewSearchTab"
+                        data-left-view="search"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="leftViewSearchPanel"
+                      >
+                        <div class="frame-142">
+                          <img class="icon2" src="images/icon-search.svg" />
+                          <div class="span">
+                            <div class="text2">검색</div>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                    <!-- REACT: LeftLayerPanel — 레이어 체크리스트(아코디언) id="leftViewLayerPanel" -->
+                    <section class="div-panel-card js-left-view-panel" id="leftViewLayerPanel" data-left-view-panel="layer" role="tabpanel" aria-labelledby="leftViewLayerTab" aria-label="맵 레이어 목록">
+                      <section class="item" aria-labelledby="leftAccordionBaseBtn">
+                        <button
+                          type="button"
+                          class="div-stat-item js-left-accordion-trigger"
+                          id="leftAccordionBaseBtn"
+                          aria-expanded="true"
+                          aria-controls="leftAccordionBasePanel"
+                        >
+                          <div class="div">기본 레이어</div>
+                          <img class="component-12" src="images/arrow.svg" />
+                        </button>
+                        <div
+                          class="frame-1000004904"
+                          id="leftAccordionBasePanel"
+                          role="region"
+                          aria-labelledby="leftAccordionBaseBtn"
+                        >
+                          <div class="chack">
+                            <div class="div-stat-item2 js-layer-check-row" role="button" tabindex="0" aria-pressed="true">
+                              <div class="div2">오픈스트리트맵</div>
+                              <div class="primitive-button2 primitive-button2--checked" aria-hidden="true"></div>
+                            </div>
+                          </div>
+                          <div class="chack">
+                            <div class="div-stat-item2 js-layer-check-row" role="button" tabindex="0" aria-pressed="false">
+                              <div class="div3">위성지도</div>
+                              <div class="primitive-button2"></div>
+                            </div>
+                          </div>
+                          <div class="chack">
+                            <div class="div-stat-item2 js-layer-check-row" role="button" tabindex="0" aria-pressed="false">
+                              <div class="div3">유역도</div>
+                              <div class="primitive-button2"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                      <section class="item" aria-labelledby="leftAccordionGwBtn">
+                        <button
+                          type="button"
+                          class="div-stat-item js-left-accordion-trigger"
+                          id="leftAccordionGwBtn"
+                          aria-expanded="true"
+                          aria-controls="leftAccordionGwPanel"
+                        >
+                          <div class="div">지하수 레이어</div>
+                          <img class="component-13" src="images/arrow.svg" />
+                        </button>
+                        <div
+                          class="frame-1000004905"
+                          id="leftAccordionGwPanel"
+                          role="region"
+                          aria-labelledby="leftAccordionGwBtn"
+                        >
+                          <div class="chack">
+                            <div class="div-stat-item2 js-layer-check-row" role="button" tabindex="0" aria-pressed="false">
+                              <div class="div3">지하수 관측망</div>
+                              <div class="primitive-button2"></div>
+                            </div>
+                          </div>
+                          <div class="chack">
+                            <div class="div-stat-item2 js-layer-check-row" role="button" tabindex="0" aria-pressed="false">
+                              <div class="div3">지하수 공공관정</div>
+                              <div class="primitive-button2"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    </section>
+                    <!-- REACT: LeftSearchPanel — 주소검색·결과목록·페이지네이션 id="leftViewSearchPanel" -->
+                    <section class="div-panel-card div-panel-card--search js-left-view-panel" id="leftViewSearchPanel" data-left-view-panel="search" role="tabpanel" aria-labelledby="leftViewSearchTab" aria-label="주소 검색" hidden>
+                      <div class="frame-1000004915">
+                        <fieldset class="div-adress">
+                          <legend class="div">주소유형</legend>
+                          <div class="radio-group" role="radiogroup" aria-label="주소유형">
+                            <button type="button" class="radio-buton js-address-radio is-active" data-address-type="legal" aria-pressed="true">
+                              <div class="item">
+                                <div class="radio-button-item">
+                                  <div class="element">
+                                    <div class="rectangle-88"></div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="label">
+                                <div class="div2">법정동</div>
+                              </div>
+                            </button>
+                            <button type="button" class="radio-buton2 js-address-radio" data-address-type="lot" aria-pressed="false">
+                              <div class="item">
+                                <div class="radio-button-item2"></div>
+                              </div>
+                              <div class="label">
+                                <div class="div2">지번</div>
+                              </div>
+                            </button>
+                          </div>
+                        </fieldset>
+                      </div>
+                      <fieldset class="searchbox">
+                        <legend class="visually-hidden">주소 검색</legend>
+                        <div class="box">
+                          <input class="div3" id="leftAddressSearchInput" type="search" placeholder="검색해주세요." />
+                          <button type="button" class="icon-size" aria-label="주소 검색">
+                            <img class="icon-search" src="images/icon-search.svg" alt="" />
+                          </button>
+                        </div>
+                      </fieldset>
+                      <section class="frame-1000004910" aria-label="검색 결과 목록">
+                        <div class="button-sec-tab">
+                          <div class="th" id="leftAddressResultList">
+                            <button type="button" class="ooo-ooo-ooo">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo2">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo3">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo4">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo5">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo6">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo7">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo8">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo9">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo10">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo11">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo12">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo13">서울시 ooo ooo ooo</button>
+                            <button type="button" class="ooo-ooo-ooo14">서울시 ooo ooo ooo</button>
+                          </div>
+                        </div>
+                      </section>
+                      <nav class="carousel" aria-label="검색 결과 페이지 이동">
+                        <button type="button" class="carousel-atomic js-search-page-prev" aria-label="이전 페이지">
+                          <span class="icon-size2">
+                            <img class="icon-arrow-left" src="images/arrow.svg" alt="" />
+                          </span>
+                        </button>
+                        <div class="carousel-number">
+                          <div class="_1" id="searchCurrentPage">1</div>
+                          <div class="div4">/</div>
+                          <div class="_8" id="searchTotalPage">8</div>
+                        </div>
+                        <button type="button" class="carousel-atomic js-search-page-next" aria-label="다음 페이지">
+                          <span class="icon-size2">
+                            <img class="icon-arrow-right" src="images/arrow.svg" alt="" />
+                          </span>
+                        </button>
+                      </nav>
+                    </section>
+                  </section>
+                </section>
+              </section>
+            </section>
+          </aside>
+          <!-- REACT 경계: PointDetailPanel — id="mapPointPanel" 관측정 상세 슬라이드 -->
+          <aside class="point-panel" id="mapPointPanel" aria-hidden="true" aria-label="포인트 상세 패널">
+            <div class="button">
+              <button type="button" class="frame-14" id="mapPointCloseBtn" aria-label="포인트 패널 닫기">
+                <svg class="icon" width="19" height="19" viewBox="0 0 19 19" fill="none" aria-hidden="true">
+                  <path d="M4.75 4.75L14.25 14.25M14.25 4.75L4.75 14.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <header class="div-card-hdr">
+              <div class="div-card-hdr-left">
+                <div class="div-card-hdr-icon-water">
+                  <img class="component-1" src="images/water.svg" alt="" />
+                </div>
+                <div class="span-card-hdr-title">
+                  <div class="title">2013-165</div>
+                </div>
+              </div>
+              <div class="span-card-hdr-badge">
+                <div class="badge">2003-165</div>
+              </div>
+            </header>
+            <section class="div-panel-card" aria-label="포인트 상세 정보">
+              <div class="div-section-sub">
+                <div class="section-title">지하수개발관정</div>
+              </div>
+              <div class="container">
+                <div class="div-stat-grid">
+                  <div class="button-sec-tab">
+                    <div class="tab-button">시추정보</div>
+                  </div>
+                </div>
+                <div class="container2">
+                  <div class="container3">
+                    <div class="container4">
+                      <div class="container5">
+                        <div class="item">
+                          <div class="div-stat-item">
+                            <div class="div">사업정보</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container6">
+                      <div class="stat-item-container">
+                        <div class="div-stat-item2">
+                          <div class="span-lbl">
+                            <div class="label">사업명</div>
+                          </div>
+                        </div>
+                        <div class="value">기타수탁</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="container6">
+                    <div class="container4">
+                      <div class="container5">
+                        <div class="item">
+                          <div class="div-stat-item">
+                            <div class="div">시추제원</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container7">
+                      <div class="stat-item-container">
+                        <div class="div-stat-item3">
+                          <div class="span-lbl"><div class="label">주소</div></div>
+                        </div>
+                        <div class="label-value">충남 논산시</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                      <div class="stat-item-container">
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">표고(ELm)</div></div></div>
+                        <div class="value2">-</div>
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">개발연도</div></div></div>
+                        <div class="value3">2003</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                      <div class="stat-item-container">
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">관리구분</div></div></div>
+                        <div class="value2">지자체</div>
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">관리기관</div></div></div>
+                        <div class="value3">논산시</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                      <div class="stat-item-container">
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">용도</div></div></div>
+                        <div class="value2">농업용</div>
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">세부용도</div></div></div>
+                        <div class="value3">전작</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                      <div class="stat-item-container">
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">구경(mm)</div></div></div>
+                        <div class="value2">250</div>
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">심도(m)</div></div></div>
+                        <div class="value3">113.8</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                      <div class="stat-item-container">
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">양수능력</div></div></div>
+                        <div class="value2">360</div>
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">토출관구경(m</div></div></div>
+                        <div class="value3">50</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                      <div class="stat-item-container">
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">펌프형태(mm)</div></div></div>
+                        <div class="value2">-</div>
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">펌프마력(PH)</div></div></div>
+                        <div class="value3">5</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                      <div class="stat-item-container">
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">시설물상태</div></div></div>
+                        <div class="value2">양호</div>
+                        <div class="div-stat-item3"><div class="span-lbl"><div class="label">시설물점검일</div></div></div>
+                        <div class="value3">2025-03-13</div>
+                        <div class="div-card-divider"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="button-sec-tab2">
+                  <div class="tab-button">지하수 시뮬레이션</div>
+                </div>
+              </div>
+            </section>
+          </aside>
+          <!-- REACT 경계: ImpactAnalysisPanel — id="impactPanel" 영향반경 분석 -->
+          <aside class="impact-panel" id="impactPanel" aria-hidden="true" aria-label="영향반경 분석 패널">
+            <header class="header-state">
+              <button type="button" class="frame-14" id="impactPanelCloseBtn" aria-label="영향반경 분석 패널 닫기">
+                <svg class="icon" width="19" height="19" viewBox="0 0 19 19" fill="none" aria-hidden="true">
+                  <path d="M4.75 4.75L14.25 14.25M14.25 4.75L4.75 14.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </header>
+            <header class="header">
+              <div class="header-left">
+                <div class="icon-container">
+                  <div class="icon2">
+                    <img class="impact-header-icon" src="images/impact.svg" alt="" />
+                  </div>
+                </div>
+                <div class="header-title-container">
+                  <div class="title">영향반경 분석</div>
+                </div>
+              </div>
+            </header>
+            <section class="card-container" aria-label="영향반경 분석 폼 및 결과">
+              <fieldset class="stat-item">
+                <legend class="label-container">
+                  <span class="label">공식 선택</span>
+                </legend>
+                <div class="radio-group">
+                  <div class="address-container">
+                    <button type="button" class="default-state js-impact-formula is-active" data-impact-formula="shulze" aria-pressed="true">
+                      <div class="item">
+                        <div class="radio-button-item">
+                          <div class="element">
+                            <div class="rectangle-88"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="label2">
+                        <div class="div">Shulze공식</div>
+                      </div>
+                    </button>
+                    <button type="button" class="selected-state js-impact-formula" data-impact-formula="weber" aria-pressed="false">
+                      <div class="item">
+                        <div class="radio-button-item2"></div>
+                      </div>
+                      <div class="label2">
+                        <div class="div">Weber공식</div>
+                      </div>
+                    </button>
+                    <button type="button" class="selected-state2 js-impact-formula" data-impact-formula="kozeny" aria-pressed="false">
+                      <div class="item">
+                        <div class="radio-button-item2"></div>
+                      </div>
+                      <div class="label2">
+                        <div class="div">Kozeny공식</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </fieldset>
+              <fieldset class="input-container">
+                <legend class="visually-hidden">분석 입력값</legend>
+                <div class="input-group"><div class="input-group2"><div class="input-group3"><div class="stat-item2"><div class="label-container2"><div class="label3">수위강하량(h)</div></div></div><div class="value-box"><div class="value">100</div></div><div class="unit">m</div><div class="divider"></div></div></div></div>
+                <div class="input-group"><div class="input-group2"><div class="input-group3"><div class="stat-item2"><div class="label-container2"><div class="label3">수리전도도(K)</div></div></div><div class="value-box"><div class="value">0.23</div></div><div class="unit">m/일</div><div class="divider"></div></div></div></div>
+                <div class="input-group"><div class="input-group2"><div class="input-group3"><div class="stat-item2"><div class="label-container2"><div class="label3">양수시간(t)</div></div></div><div class="value-box"><div class="value">100</div></div><div class="unit">m</div><div class="divider"></div></div></div></div>
+                <div class="input-group"><div class="input-group2"><div class="input-group3"><div class="stat-item2"><div class="label-container2"><div class="label3">지류계수(S)</div></div></div><div class="value-box"><div class="value">0.2</div></div><div class="divider"></div></div></div></div>
+              </fieldset>
+              <fieldset class="button-group">
+                <legend class="visually-hidden">계산·초기화·적용</legend>
+                <button type="button" class="secondary-button"><div class="calculate-button">계산</div></button>
+                <button type="button" class="secondary-button2"><div class="reset-button">초기화</div></button>
+                <button type="button" class="secondary-button3"><div class="apply-button">적용</div></button>
+              </fieldset>
+              <section class="result-container" aria-label="계산 결과 요약">
+                <div class="result-card">
+                  <div class="result-title-container"><div class="result-title">계산결과</div></div>
+                  <div class="result-value-container"><div class="result-value">16 m</div></div>
+                </div>
+                <div class="result-card2">
+                  <div class="result-title-container"><div class="result-title2">평균 개발 심도</div></div>
+                  <div class="result-value-container"><div class="result-value2">100 m</div></div>
+                </div>
+              </section>
+              <section class="impact-area-container" aria-label="영향반경 내 관측정">
+                <div class="impact-area-header">
+                  <div class="impact-area-title-container">
+                    <div class="impact-area-icon-container">
+                      <img class="impact-area-icon" src="images/Impact Area Icon.svg" alt="" />
+                    </div>
+                    <div class="impact-area-title">영향반경 내 관측정</div>
+                  </div>
+                </div>
+                <div class="table-container">
+                  <div class="table-header-row">
+                    <div class="table-header"><div class="table-header-id">관리번호</div></div>
+                    <div class="table-header"><div class="table-header-address">주소</div></div>
+                  </div>
+                  <div class="table-body"><div class="table-row"><div class="table-cell"><div class="table-cell-id">2201200209</div></div><div class="table-cell2"><div class="table-cell-address">충청남도 논산시 양촌면 양촌리 978-2</div></div></div></div>
+                  <div class="table-body2"><div class="table-row"><div class="table-cell"><div class="table-cell-id">2201200210</div></div><div class="table-cell2"><div class="table-cell-address">충청남도 논산시 양촌면 양촌리 978-3</div></div></div></div>
+                  <div class="table-body"><div class="table-row"><div class="table-cell"><div class="table-cell-id">2201200211</div></div><div class="table-cell2"><div class="table-cell-address">충청남도 논산시 양촌면 양촌리 978-4</div></div></div></div>
+                </div>
+              </section>
+            </section>
+          </aside>
+          <!-- REACT 경계: FlowAnalysisPanel — id="flowPanel" 유동방향 분석 -->
+          <aside class="flow-panel" id="flowPanel" aria-hidden="true" aria-label="유동방향 분석 패널">
+            <div class="button">
+              <button type="button" class="frame-14" id="flowPanelCloseBtn" aria-label="유동방향 분석 패널 닫기">
+                <svg class="icon" width="19" height="19" viewBox="0 0 19 19" fill="none" aria-hidden="true">
+                  <path d="M4.75 4.75L14.25 14.25M14.25 4.75L4.75 14.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <header class="div-card-hdr">
+              <div class="div-card-hdr-left">
+                <div class="div-sum-icon-map-02">
+                  <div class="icon2" aria-hidden="true">
+                    <svg class="group2" width="10" height="14" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M5.00004 13.3251C5.03083 13.3447 5.02243 13.3307 5.00004 13.3056C4.97765 13.3307 4.96926 13.3447 5.00004 13.3251Z" stroke="var(--color-azure-60, #3b82f6)" stroke-width="1.12562" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M5 0C2.23889 0 0 2.28333 0 5.1C0 6.04444 0.15 6.55833 0.4 7.36389C1.14722 9.775 4.73333 13.0028 5 13.3056C5.26389 13.0028 8.85 9.77778 9.59722 7.375C9.85 6.56667 10.0028 6.04722 10.0028 5.1C10.0028 2.28333 7.76389 0 5.00278 0H5ZM5.01944 7.12778C3.91389 7.12778 3.01944 6.23333 3.01944 5.12778C3.01944 4.02222 3.91389 3.12778 5.01944 3.12778C6.125 3.12778 7.01944 4.02222 7.01944 5.12778C7.01944 6.23333 6.125 7.12778 5.01944 7.12778Z" stroke="var(--color-azure-60, #3b82f6)" stroke-width="1.12562" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <svg class="vector2" width="16" height="19" viewBox="0 0 16 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M13.8028 0H11.1111C8.59167 0 6.52778 2.06111 6.52778 4.58333C6.52778 7.10556 7.97222 9.16667 10.4944 9.16667H11.35C13.8694 9.16667 15.3167 11.2306 15.3167 13.75C15.3167 16.2722 13.2528 18.3333 10.7333 18.3333H0" stroke="#3B82F6" stroke-width="1.12562" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2.78 2.78" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="span-card-hdr-title">
+                  <div class="title">유동방향 분석</div>
+                </div>
+              </div>
+            </header>
+            <section class="div-panel-card" aria-label="유동방향 분석 입력 및 결과">
+              <div class="container">
+                <!-- 대수층 특성 -->
+                <div class="container2">
+                  <div class="container3">
+                    <div class="container4">
+                      <div class="item">
+                        <div class="div-stat-item">
+                          <div class="div">대수층 특성</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="container2">
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">공극률</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">투수량 (m/day)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">대수층 두께 (m)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">경사도</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">유형 (degree)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">계산범위(m)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 양수량 -->
+                <div class="container2">
+                  <div class="container3">
+                    <div class="container4">
+                      <div class="item">
+                        <div class="div-stat-item">
+                          <div class="div">양수량</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flow-qty-pair">
+                    <div class="container">
+                      <div class="container2">
+                        <div class="container3">
+                          <div class="container4">
+                            <div class="div-stat-item">
+                              <div class="span-lbl">
+                                <div class="label">
+                                  <span>
+                                    <span class="label-span">유출량</span>
+                                    <span class="label-span2">(m/day)</span>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="box">
+                              <div class="value">0</div>
+                            </div>
+                          </div>
+                          <div class="container4">
+                            <div class="div-stat-item">
+                              <div class="span-lbl2">
+                                <div class="label2">
+                                  <span>
+                                    <span class="label-2-span">경호반경</span>
+                                    <span class="label-2-span2">(m)</span>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="box">
+                              <div class="value">0</div>
+                            </div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 중심좌표 · 결과표 · 정/역방향 -->
+                <div class="container10">
+                  <div class="container2">
+                    <div class="container3">
+                      <div class="container4">
+                        <div class="item">
+                          <div class="div-stat-item">
+                            <div class="div">중심좌표</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flow-coord-inline">
+                      <div class="flow-coord-inline__row">
+                        <div class="container9 flow-coord-inline__metrics">
+                          <div class="div-stat-item4">
+                            <div class="span-lbl4">
+                              <div class="label">TMX</div>
+                            </div>
+                          </div>
+                          <div class="box3">
+                            <div class="value">0</div>
+                          </div>
+                        </div>
+                        <div class="container9 flow-coord-inline__metrics">
+                          <div class="div-stat-item4">
+                            <div class="span-lbl4">
+                              <div class="label4">TMY</div>
+                            </div>
+                          </div>
+                          <div class="box3">
+                            <div class="value">0</div>
+                          </div>
+                          <button type="button" class="box4">
+                            <span class="button2">좌표추출</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="div-card-divider"></div>
+                    </div>
+
+                    <div class="container11">
+                      <div class="table-wl-table center-result-table">
+                        <div class="component-4">
+                          <div class="th">
+                            <div class="column-header">NUM</div>
+                          </div>
+                          <div class="th">
+                            <div class="column-header">tmx</div>
+                          </div>
+                          <div class="th2">
+                            <div class="column-header">tmy</div>
+                          </div>
+                          <div class="th3">
+                            <div class="column-header">유출량</div>
+                          </div>
+                          <div class="th4">
+                            <div class="column-header">경호반경</div>
+                          </div>
+                        </div>
+                        <div class="tbody">
+                          <div class="component-5">
+                            <div class="td">
+                              <div class="value2">1</div>
+                            </div>
+                            <div class="td2">
+                              <div class="value2">236556.9</div>
+                            </div>
+                            <div class="td2">
+                              <div class="value2">317215.6</div>
+                            </div>
+                            <div class="td3">
+                              <div class="value2">0.0</div>
+                            </div>
+                            <div class="td4">
+                              <div class="value2">0.0</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="tbody2">
+                          <div class="component-5">
+                            <div class="td">
+                              <div class="value2">2</div>
+                            </div>
+                            <div class="td2">
+                              <div class="value2">236579.1</div>
+                            </div>
+                            <div class="td2">
+                              <div class="value2">317189.3</div>
+                            </div>
+                            <div class="td3">
+                              <div class="value2">0.0</div>
+                            </div>
+                            <div class="td4">
+                              <div class="value2">0.0</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="tbody3">
+                          <div class="component-52">
+                            <div class="box5">
+                              <div class="button3">전체삭제</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="container12 flow-direction-with-table">
+                    <div class="container5">
+                      <div class="container6 flow-direction-with-table__stack">
+                        <fieldset class="container13">
+                          <legend class="visually-hidden">정방향·역방향 선택</legend>
+                          <div class="container14">
+                            <div class="div-stat-item5">
+                              <div class="span-lbl4">
+                                <div class="label">정/역방향</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="radio-group" role="radiogroup" aria-label="정·역방향">
+                            <button type="button" class="radio-buton" aria-pressed="true">
+                              <div class="item2">
+                                <div class="radio-button-item">
+                                  <div class="element">
+                                    <div class="rectangle-88"></div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="label5">
+                                <div class="div2">정방향</div>
+                              </div>
+                            </button>
+                            <button type="button" class="radio-buton2" aria-pressed="false">
+                              <div class="item2">
+                                <div class="radio-button-item2"></div>
+                              </div>
+                              <div class="label5">
+                                <div class="div2">역방향</div>
+                              </div>
+                            </button>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </fieldset>
+                        <div class="table-wl-table table-wl-table2 flow-direction-with-table__grid">
+                          <div class="component-4">
+                            <div class="th">
+                              <div class="column-header">NUM</div>
+                            </div>
+                            <div class="th">
+                              <div class="column-header">tmx</div>
+                            </div>
+                            <div class="th5">
+                              <div class="column-header">tmy</div>
+                            </div>
+                            <div class="th6">
+                              <div class="column-header">삭제</div>
+                            </div>
+                          </div>
+                          <div class="tbody">
+                            <div class="component-53">
+                              <div class="td">
+                                <div class="value2">1</div>
+                              </div>
+                              <div class="td5">
+                                <div class="value2">236556.9</div>
+                              </div>
+                              <div class="td5">
+                                <div class="value2">317215.6</div>
+                              </div>
+                              <div class="td4">
+                                <div class="box6">
+                                  <div class="button3">삭제</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="tbody2">
+                            <div class="component-53">
+                              <div class="td">
+                                <div class="value2">2</div>
+                              </div>
+                              <div class="td5">
+                                <div class="value2">236579.1</div>
+                              </div>
+                              <div class="td5">
+                                <div class="value2">317189.3</div>
+                              </div>
+                              <div class="td4">
+                                <div class="box6">
+                                  <div class="button3">삭제</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="tbody">
+                            <div class="component-54">
+                              <div class="td4"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 정보 -->
+                <div class="container2">
+                  <div class="container16">
+                    <div class="container17">
+                      <div class="container3">
+                        <div class="container4">
+                          <div class="item">
+                            <div class="div-stat-item">
+                              <div class="div">정보</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="container2">
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">유출입 모사기간</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">최대모델탐거리</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">포획구간 모사기간</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">지류계수(S)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="container5">
+                    <div class="container6">
+                      <fieldset class="container13">
+                        <legend class="visually-hidden">모사 기간</legend>
+                        <div class="radio-group2" role="radiogroup" aria-label="모사 기간">
+                          <button type="button" class="radio-buton" aria-pressed="true" data-flow-period="3">
+                            <div class="item2">
+                              <div class="radio-button-item">
+                                <div class="element">
+                                  <div class="rectangle-88"></div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="label5">
+                              <div class="div2">3년</div>
+                            </div>
+                          </button>
+                          <button type="button" class="radio-buton2" aria-pressed="false" data-flow-period="5">
+                            <div class="item2">
+                              <div class="radio-button-item2"></div>
+                            </div>
+                            <div class="label5">
+                              <div class="div2">5년</div>
+                            </div>
+                          </button>
+                          <button type="button" class="radio-buton2" aria-pressed="false" data-flow-period="10">
+                            <div class="item2">
+                              <div class="radio-button-item2"></div>
+                            </div>
+                            <div class="label5">
+                              <div class="div2">10년</div>
+                            </div>
+                          </button>
+                        </div>
+                        <div class="div-card-divider"></div>
+                      </fieldset>
+                    </div>
+                  </div>
+                </div>
+
+                <fieldset class="container15">
+                  <legend class="visually-hidden">초기화 및 계산</legend>
+                  <button type="button" class="button-sec-tab">
+                    <div class="button3">초기화</div>
+                  </button>
+                  <button type="button" class="button-sec-tab2">
+                    <div class="button3">계산</div>
+                  </button>
+                </fieldset>
+              </div>
+            </section>
+          </aside>
+          <!-- REACT 경계: CaptureAnalysisPanel — id="capturePanel" 포획구간 분석 -->
+          <aside class="capture-panel" id="capturePanel" aria-hidden="true" aria-label="포획구간 분석 패널">
+            <div class="button">
+              <button type="button" class="frame-14" id="capturePanelCloseBtn" aria-label="포획구간 분석 패널 닫기">
+                <svg class="icon" width="19" height="19" viewBox="0 0 19 19" fill="none" aria-hidden="true">
+                  <path d="M4.75 4.75L14.25 14.25M14.25 4.75L4.75 14.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <header class="div-card-hdr">
+              <div class="div-card-hdr-left">
+                <div class="div-sum-icon-map-03">
+                  <div class="icon2 icon2--asset" aria-hidden="true">
+                    <img src="images/icon.svg" alt="" width="20" height="20" decoding="async" />
+                  </div>
+                </div>
+                <div class="span-card-hdr-title">
+                  <div class="title">포획구간 분석</div>
+                </div>
+              </div>
+            </header>
+            <section class="div-panel-card" aria-label="포획구간 분석 입력 및 결과">
+              <div class="container">
+                <div class="container2">
+                  <div class="container3">
+                    <div class="container4">
+                      <div class="item">
+                        <div class="div-stat-item">
+                          <div class="div">기본</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="container2">
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">계산범위(m)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">양수량 (㎥/day)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">대수층 두께 (m)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">투수계수(m/day)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">공극률</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="container8">
+                  <div class="container2">
+                    <div class="container2">
+                      <div class="container3">
+                        <div class="container4">
+                          <div class="item">
+                            <div class="div-stat-item">
+                              <div class="div">중심좌표</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="container5">
+                        <div class="container6">
+                          <div class="container9">
+                            <div class="container10">
+                              <div class="div-stat-item3">
+                                <div class="span-lbl2">
+                                  <div class="label">TMX</div>
+                                </div>
+                              </div>
+                              <div class="box2">
+                                <div class="value2">경도</div>
+                              </div>
+                            </div>
+                            <div class="div-card-divider"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="container5">
+                        <div class="container6">
+                          <div class="container9">
+                            <div class="container10">
+                              <div class="div-stat-item3">
+                                <div class="span-lbl2">
+                                  <div class="label2">TMY</div>
+                                </div>
+                              </div>
+                              <div class="box3">
+                                <div class="value">0</div>
+                              </div>
+                              <button type="button" class="box4">
+                                <span class="button2">좌표추출</span>
+                              </button>
+                            </div>
+                            <div class="div-card-divider"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="container2">
+                  <div class="container11">
+                    <div class="container12">
+                      <div class="container3">
+                        <div class="container4">
+                          <div class="item">
+                            <div class="div-stat-item">
+                              <div class="div">경계조건</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="container2">
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">경계조건</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value3">무경계</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">경계방향</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">경계와공과의거리</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="container2">
+                  <div class="container11">
+                    <div class="container12">
+                      <div class="container3">
+                        <div class="container4">
+                          <div class="item">
+                            <div class="div-stat-item">
+                              <div class="div">주변 지하수 유동정보</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="container2">
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">경사도</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">유향(degree)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">0</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">최대이동거리(m)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">10</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="container5">
+                      <div class="container6">
+                        <div class="container7">
+                          <div class="div-stat-item2">
+                            <div class="span-lbl">
+                              <div class="label">모델링 기간(일)</div>
+                            </div>
+                          </div>
+                          <div class="box">
+                            <div class="value">1095</div>
+                          </div>
+                          <div class="div-card-divider"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="container5">
+                    <div class="container6">
+                      <fieldset class="container13">
+                        <legend class="visually-hidden">모델링 기간(년)</legend>
+                        <div class="container14">
+                          <div class="radio-group2" role="radiogroup" aria-label="모델링 기간(년)">
+                          <button type="button" class="radio-buton" aria-pressed="true" data-capture-period="3">
+                            <div class="item2">
+                              <div class="radio-button-item">
+                                <div class="element">
+                                  <div class="rectangle-88"></div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="label3">
+                              <div class="div2">3년</div>
+                            </div>
+                          </button>
+                          <button type="button" class="radio-buton2" aria-pressed="false" data-capture-period="5">
+                            <div class="item2">
+                              <div class="radio-button-item2"></div>
+                            </div>
+                            <div class="label3">
+                              <div class="div2">5년</div>
+                            </div>
+                          </button>
+                          <button type="button" class="radio-buton2" aria-pressed="false" data-capture-period="10">
+                            <div class="item2">
+                              <div class="radio-button-item2"></div>
+                            </div>
+                            <div class="label3">
+                              <div class="div2">10년</div>
+                            </div>
+                          </button>
+                          </div>
+                        </div>
+                        <div class="div-card-divider"></div>
+                      </fieldset>
+                    </div>
+                  </div>
+                </div>
+                <fieldset class="container15">
+                  <legend class="visually-hidden">초기화 및 계산</legend>
+                  <button type="button" class="button-sec-tab">
+                    <div class="button3">초기화</div>
+                  </button>
+                  <button type="button" class="button-sec-tab2">
+                    <div class="button3">계산</div>
+                  </button>
+                </fieldset>
+              </div>
+            </section>
+          </aside>
+        </section>
+        <!-- ···· 지도 뷰·오버레이 (map-background): 끝 ···· -->
+
+      </section>
+      <!-- ··· 지도 스테이지 (map-stage): 끝 ··· -->
+
+      <!-- REACT: 우측 스페이서 — 좌측과 대칭 -->
+      <aside class="main-side main-side-right" aria-hidden="true"></aside>
+    </main>
+    <!-- ---------- 본문: 시뮬레이션 지도 (main): 끝 ---------- -->
+  </div>
+  <!-- ---------- .page-root(헤더·요약·본문) 끝 — 오버레이는 body 직계 ---------- -->
+
+  <!--
+    ─────────────────────────────────────────────────────────────────────────
+    REACT 경계: SummaryPanelLayer — id="summaryPanelLayer"
+    플레이스홀더/설명용 슬라이드 (실제 분석 UI는 impact/flow/capture 패널 사용)
+    하위: SummaryPanelScrim | SummarySlidePanel ×3 (data-summary-panel c/d/e)
+    Figma: node 130-2307 — 47-224·47-361·47-507
+    ─────────────────────────────────────────────────────────────────────────
+  -->
+  <aside
+    class="ui-summary-panel-layer"
+    id="summaryPanelLayer"
+    aria-label="분석 요약 슬라이드 레이어"
+    aria-hidden="true"
+  >
+    <!-- REACT: 배경 스크림 — 클릭 시 레이어 닫기 -->
+    <button type="button" class="ui-summary-panel-scrim" id="summaryPanelScrim" tabindex="-1" aria-label="배경 누르고 분석 패널 닫기"></button>
+    <!-- REACT: SummarySlidePanel — panelId="c" 영향반경 (플레이스홀더) -->
+    <section
+      class="ui-slide-panel"
+      id="summaryPanelC"
+      data-summary-panel="c"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="summaryPanelCTitle"
+    >
+      <header class="ui-slide-panel__header">
+        <h2 class="ui-slide-panel__title" id="summaryPanelCTitle">영향반경 분석</h2>
+        <button type="button" class="ui-btn ui-btn--panel-close js-summary-panel-close" aria-label="영향반경 분석 패널 닫기">✕</button>
+      </header>
+      <div class="ui-slide-panel__body">
+        <p>지하수 시뮬레이션에서 영향반경(반경) 분석을 설정·확인합니다. (Figma <span lang="en">node 47-224</span>)</p>
+        <a
+          class="ui-slide-panel__figma"
+          href="https://www.figma.com/design/pg8IgQvFrUFlzYBpOWw9uy/%EC%A7%80%ED%95%98%EC%88%98-%EB%AC%B4%ED%95%9C%EC%A0%95%EB%B3%B4-%ED%98%91%EC%97%85?node-id=47-224&m=dev"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Figma에서 보기 (47-224)</a>
+      </div>
+    </section>
+    <!-- REACT: SummarySlidePanel — panelId="d" 유동방향 -->
+    <section
+      class="ui-slide-panel"
+      id="summaryPanelD"
+      data-summary-panel="d"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="summaryPanelDTitle"
+    >
+      <header class="ui-slide-panel__header">
+        <h2 class="ui-slide-panel__title" id="summaryPanelDTitle">유동방향 분석</h2>
+        <button type="button" class="ui-btn ui-btn--panel-close js-summary-panel-close" aria-label="유동방향 분석 패널 닫기">✕</button>
+      </header>
+      <div class="ui-slide-panel__body">
+        <p>유동방향(흐름)을 분석합니다. (Figma <span lang="en">node 47-361</span>)</p>
+        <a
+          class="ui-slide-panel__figma"
+          href="https://www.figma.com/design/pg8IgQvFrUFlzYBpOWw9uy/%EC%A7%80%ED%95%98%EC%88%98-%EB%AC%B4%ED%95%9C%EC%A0%95%EB%B3%B4-%ED%98%91%EC%97%85?node-id=47-361&m=dev"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Figma에서 보기 (47-361)</a>
+      </div>
+    </section>
+    <!-- REACT: SummarySlidePanel — panelId="e" 포획구간 -->
+    <section
+      class="ui-slide-panel"
+      id="summaryPanelE"
+      data-summary-panel="e"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="summaryPanelETitle"
+    >
+      <header class="ui-slide-panel__header">
+        <h2 class="ui-slide-panel__title" id="summaryPanelETitle">포획구간 분석</h2>
+        <button type="button" class="ui-btn ui-btn--panel-close js-summary-panel-close" aria-label="포획구간 분석 패널 닫기">✕</button>
+      </header>
+      <div class="ui-slide-panel__body">
+        <p>포획구간(캡처/영역) 분석을 설정합니다. (Figma <span lang="en">node 47-507</span>)</p>
+        <a
+          class="ui-slide-panel__figma"
+          href="https://www.figma.com/design/pg8IgQvFrUFlzYBpOWw9uy/%EC%A7%80%ED%95%98%EC%88%98-%EB%AC%B4%ED%95%9C%EC%A0%95%EB%B3%B4-%ED%98%91%EC%97%85?node-id=47-507&m=dev"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Figma에서 보기 (47-507)</a>
+      </div>
+    </section>
+  </aside>
+
+  <script src="js/main.js" defer></script>
+</body>
+
+</html>

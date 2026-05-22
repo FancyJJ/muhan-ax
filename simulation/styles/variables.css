@@ -1,0 +1,254 @@
+/**
+ * Design tokens — 시뮬레이션 UI
+ *
+ * 로드 순서: `variables.css` → `style.css`.
+ *
+ * Figma “Styles of your File” 원시 `:root` 덤프는 중복 키를 정리(dedupe)한 뒤
+ * `style.css` 최상단 `:root`에만 둡니다. (구 `figma-tokens.css`는 이 파일 설명에 통합됨)
+ * 동일 변수명에 서로 다른 font-size가 여러 번 나오면 `--pretendard-*-font-size-14` 등
+ * 보조 토큰으로 분리합니다.
+ *
+ * 이 파일의 `--figma-color-*`·alias는 위 Figma `:root` 블록과 함께 로드됩니다.
+ */
+:root {
+  /* ─── Base layout & typography ─── */
+  --font-sans: "Pretendard", -apple-system, system-ui, sans-serif;
+  --color-bg-app: #0a1128;
+  --color-bg-main: #020e34;
+  --color-bg-map-panel: #020d34;
+  /* Figma node 296:800 Left Panel (시뮬 MhAI 9:4053) */
+  --left-panel-w: 340px;
+  --left-panel-bg: #0b1121;
+  --left-panel-border: rgba(46, 74, 130, 0.12);
+  --map-left-card-bg: rgba(255, 255, 255, 0.02);
+  --map-left-card-border: rgba(255, 255, 255, 0.05);
+  --map-stat-bg: rgba(59, 130, 246, 0.2);
+  /* Figma div.stat-item (기본/지하수 레이어 행, MhAI 9-4053) */
+  --map-stat-item-padding: 6px 8px 6px 17px;
+  --map-stat-item-radius: 5px;
+  --map-stat-item-content-min-h: 23px;
+  --map-stat-item-row-min-h: 35px; /* 6 + 23 + 6 */
+  --map-stat-block-gap: 7px; /* header ↔ 하위 패널 */
+  /* Figma chack: Primitive.button.svg (체크) / azure-68 테두리(미체크) / 본문 #fff */
+  --map-layer-check-size: 16.5px;
+  --map-layer-check-radius: 4px;
+  --map-layer-check-mt: 5px;
+  --map-layer-check-mb: 5.5px;
+  --map-layer-sublist-pl: 19px;
+  --map-layer-row-text: #ffffff;
+  --color-text-body: #e2e8f0;
+  --color-text-heading: #f8fafc;
+  --color-text-muted: rgba(255, 255, 255, 0.5);
+
+  /* ─── Figma / 컴포넌트 (호환 alias) ─── */
+  --color-azure-11-60: var(--figma-color-ebony-60);
+  --color-azure-35-15: var(--figma-color-chambray-15);
+  --color-grey-98: #f8fafc;
+  --color-grey-96: #f1f5f9;
+  --color-cyan-43: var(--figma-color-cyan-43);
+  --color-azure-60: var(--figma-color-dodger-blue);
+  --color-azure-68: var(--figma-color-malibu);
+  --map-layer-check-border-unchecked: 1px solid var(--color-azure-68);
+  --color-red-57: var(--figma-color-red-57);
+  --color-white-2: var(--figma-color-white-2);
+  --color-white-4: var(--figma-color-white-4);
+  --color-orange-50-12: var(--figma-color-orange-50-12);
+  --color-cyan-43-25: var(--figma-color-cyan-43-25);
+  --color-spring-green-39-15: var(--figma-color-spring-green-39-15);
+  --color-red-60-12: var(--figma-color-red-60-12);
+  --color-azure-60-20: rgba(59, 130, 246, 0.2);
+
+  --item-spacing-xxs: 4px;
+  --item-spacing-10: 10px;
+  --pretendard-bold-font-family: "Pretendard-Bold", sans-serif;
+  --pretendard-bold-font-size: 16px;
+  --pretendard-bold-font-weight: 700;
+  --stroke-weight-6: 6px;
+
+  /* Summary page title (22px) */
+  --summary-page-title-size: 22px;
+
+  /* ─── Site header (GNB) ─── */
+  --header-height: 56px;
+  --header-gradient: linear-gradient(90deg, #1a2b52, #243b6e, #2e4a82);
+  --header-bottom-border: rgba(46, 80, 144, 0.35);
+  --nav-pill-bg: rgba(51, 102, 204, 0.12);
+  --nav-pill-border: rgba(51, 102, 204, 0.2);
+  --nav-pill-color: #b0c4e8;
+  --nav-pill-hover-bg: rgba(51, 102, 204, 0.25);
+  --nav-pill-active-bg: rgba(51, 102, 204, 0.35);
+  --nav-pill-active-border: rgba(51, 102, 204, 0.5);
+  --nav-active-indicator: #01b70a;
+  --nav-simulation-start: #1f6ae7;
+  --nav-simulation-end: #1a5cd4;
+  --nav-bot-bg: rgba(6, 182, 212, 0.12);
+  --nav-bot-border: rgba(6, 182, 212, 0.25);
+  --nav-bot-color: #22d3ee;
+  --live-badge-bg: rgba(16, 185, 129, 0.12);
+  --live-badge-border: rgba(16, 185, 129, 0.3);
+  --live-badge-color: #34d399;
+  --nav-actions-border: rgba(46, 80, 144, 0.3);
+  --login-btn-bg: rgba(51, 102, 204, 0.15);
+  --login-btn-border: rgba(51, 102, 204, 0.35);
+  --login-btn-color: #7eb3e8;
+  --admin-btn-bg: rgba(1, 183, 10, 0.12);
+  --admin-btn-border: rgba(1, 183, 10, 0.3);
+  --admin-btn-color: #3dd645;
+  --logo-text-size: 18px;
+  --logo-stroke: #e8563a;
+  --logo-kr-color: rgba(255, 255, 255, 0.85);
+
+  /* ─── Map & overlay (맵·슬라이드·패널) ─── */
+  --z-map-hamburger: 10;
+  --z-map-point: 9;
+  --z-map-overlay: 12;
+  /* 헤더·요약 바 위로 확실히 올리기(스택/겹침 이슈 방지) */
+  --z-summary-panel: 5000;
+  --transition-panel: 0.24s ease;
+  --transition-slide-left: 0.38s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-slide-right: 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  --easing-overshoot: cubic-bezier(0.22, 1, 0.36, 1);
+  --map-hamburger-grad-top: #64a8ff;
+  --map-hamburger-grad-bottom: #417eef;
+  --map-point-fill: #ec9696;
+  /* 맵 포인트 선택 시 바깥 링 (Figma 스와치에 가깝게 #B197FC) */
+  --map-point-ring-selected: #b197fc;
+  --map-overlay-border: #66bfff;
+  --overlay-bg: rgba(15, 23, 42, 0.96);
+  --overlay-border: rgba(96, 165, 250, 0.35);
+  --overlay-title: #e2e8f0;
+  --overlay-label: #93a6c9;
+  --overlay-value: #f8fafc;
+  --overlay-primary: #3b82f6;
+  --overlay-primary-hover: #2563eb;
+  --overlay-secondary: rgba(30, 41, 59, 0.95);
+  --map-aspect: 1920 / 1067;
+
+  /* ─── Figma verified tokens (node 9:4053) ─── */
+  --figma-color-ebony: #0b1121;
+  --figma-color-ebony-92: rgba(15, 23, 42, 0.92);
+  --figma-color-ebony-60: rgba(15, 23, 42, 0.6);
+  --figma-color-firefly-60: rgba(8, 16, 32, 0.6);
+  --figma-color-chambray-12: rgba(46, 74, 130, 0.12);
+  --figma-color-chambray-15: rgba(46, 74, 130, 0.15);
+  --figma-color-chambray-20: rgba(46, 74, 130, 0.2);
+  --figma-color-mariner-35: rgba(51, 102, 204, 0.35);
+  --figma-color-dodger-blue: #3b82f6;
+  --figma-color-malibu: #60a5fa;
+  --figma-color-gull-gray: #94a3b8;
+  --figma-color-mystic: #e2e8f0;
+  --figma-color-white-solid: #ffffff;
+  --figma-color-white-2: rgba(255, 255, 255, 0.02);
+  --figma-color-white-4: rgba(255, 255, 255, 0.04);
+  --figma-color-white-5: rgba(255, 255, 255, 0.05);
+  --figma-color-cyan-43: #06b6d4;
+  --figma-color-cyan-43-25: rgba(6, 182, 212, 0.25);
+  --figma-color-spring-green-39-15: rgba(16, 185, 129, 0.15);
+  --figma-color-orange-50-12: rgba(245, 158, 11, 0.12);
+  --figma-color-red-57: #e8563a;
+  --figma-color-red-60-12: rgba(239, 68, 68, 0.12);
+  --figma-color-red-60: #ef4444;
+  --figma-color-red-71: #f87171;
+  --figma-color-red-60-15: rgba(239, 68, 68, 0.15);
+  --figma-color-green-36: #01b70a;
+  --figma-color-green-36-8: rgba(1, 183, 10, 0.08);
+  --figma-color-green-36-30: rgba(1, 183, 10, 0.3);
+  --figma-color-azure-49: #2252d8;
+  --figma-color-azure-16: #1a2838;
+  --figma-color-azure-28: #2e4863;
+  --figma-color-azure-79: #9bc7f7;
+  --figma-color-azure-87: #c7d8f5;
+  --figma-color-spring-green-15: #1d2e26;
+  --figma-color-spring-green-27: #2f5a45;
+  --figma-color-spring-green-73: #8ce8af;
+  --figma-color-spring-green-86: #b8ffd0;
+  --figma-color-st-tropaz-35: rgba(46, 80, 144, 0.35);
+
+  --figma-font-family-1: "Pretendard", sans-serif;
+  --figma-font-size-11: 11px;
+  --figma-font-size-16: 16px;
+  --figma-font-size-22: 22px;
+  --figma-font-weight-400: 400;
+  --figma-font-weight-500: 500;
+  --figma-font-weight-600: 600;
+  --figma-font-weight-700: 700;
+  --figma-item-spacing-5: 5px;
+  --figma-item-spacing-10: 10px;
+  --figma-item-spacing-12: 12px;
+  --figma-stroke-weight-1: 1px;
+  --figma-stroke-weight-6: 6px;
+
+  /* ─── Backward-compatible aliases for existing CSS ─── */
+  --color-azure-9: var(--figma-color-ebony);
+  --color-azure-35-12: var(--figma-color-chambray-12);
+  --color-azure-35-20: var(--figma-color-chambray-20);
+  --color-azure-11-92: var(--figma-color-ebony-92);
+  --color-azure-11-60: var(--figma-color-ebony-60);
+  --color-azure-35-15: var(--figma-color-chambray-15);
+  --color-azure-50-35: var(--figma-color-mariner-35);
+  --color-azure-60: var(--figma-color-dodger-blue);
+  --color-azure-68: var(--figma-color-malibu);
+  --color-azure-65: var(--figma-color-gull-gray);
+  --color-white-solid: var(--figma-color-white-solid);
+  --color-white-2: var(--figma-color-white-2);
+  --color-white-4: var(--figma-color-white-4);
+  --color-white-5: var(--figma-color-white-5);
+  --color-grey-91: var(--figma-color-mystic);
+  --color-cyan-43: var(--figma-color-cyan-43);
+  --color-cyan-43-25: var(--figma-color-cyan-43-25);
+  --color-orange-50-12: var(--figma-color-orange-50-12);
+  --color-spring-green-39-15: var(--figma-color-spring-green-39-15);
+  --color-red-57: var(--figma-color-red-57);
+  --color-red-60-12: var(--figma-color-red-60-12);
+  --color-azure-60-20: rgba(59, 130, 246, 0.2);
+
+  --item-spacing-5: var(--figma-item-spacing-5);
+  --item-spacing-10: var(--figma-item-spacing-10);
+  --font-family-font-1: var(--figma-font-family-1);
+  --left-panel-tab-font-size: 13.571428298950195px;
+  --left-panel-row-font-size: var(--font-size-11);
+  --left-panel-row-line-height: 16.5px;
+  --font-size-11: var(--figma-font-size-11);
+  --font-weight-400: var(--figma-font-weight-400);
+  --font-weight-500: var(--figma-font-weight-500);
+
+  /* ─── Search panel figma tokens (9:4053) ─── */
+  --color-azure-47: #64748b;
+  --color-azure-50-30: rgba(51, 102, 204, 0.3);
+  --color-azure-50-50: rgba(51, 102, 204, 0.5);
+  --color-azure-60-3: rgba(59, 130, 246, 0.03);
+  --color-azure-60-25: rgba(59, 130, 246, 0.25);
+  --color-azure-60-6: rgba(59, 130, 246, 0.06);
+  --color-azure-49: var(--figma-color-azure-49);
+  --color-green-36: var(--figma-color-green-36);
+  --color-green-36-8: var(--figma-color-green-36-8);
+  --color-green-36-30: var(--figma-color-green-36-30);
+  --color-red-60: var(--figma-color-red-60);
+  --color-red-60-15: var(--figma-color-red-60-15);
+  --color-red-71: var(--figma-color-red-71);
+  --color-white-25: rgba(255, 255, 255, 0.25);
+  --color-azure-16: var(--figma-color-azure-16);
+  --color-azure-28: var(--figma-color-azure-28);
+  --color-azure-79: var(--figma-color-azure-79);
+  --color-azure-87: var(--figma-color-azure-87);
+  --color-spring-green-15: var(--figma-color-spring-green-15);
+  --color-spring-green-27: var(--figma-color-spring-green-27);
+  --color-spring-green-73: var(--figma-color-spring-green-73);
+  --color-spring-green-86: var(--figma-color-spring-green-86);
+  --color-white-50: rgba(255, 255, 255, 0.5);
+  --color-element-inverse: #ffffff;
+  --color-element-gray-dark: #58616a;
+
+  --typo-font-type: "Pretendard", sans-serif;
+  --pretendard-regular-font-family: "Pretendard-Regular", "Pretendard", sans-serif;
+  --pretendard-regular-font-size: 12px;
+  --pretendard-regular-font-weight: 400;
+
+  --radius-max: 550px;
+  --padding-1: 1.1px;
+  --padding-6: 9.85px;
+  --gap-2: 2.46px;
+  --gap-3: 4.4px;
+  --size-height-4: 13.2px;
+  --size-height-6: 24.63px;
+}
